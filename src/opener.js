@@ -23,7 +23,6 @@ function closeChrome() {
 function openUrl(url, options = {}) {
   if (!url) return;
   const replace = options.replace === true;
-  const _newWindow = options.newWindow !== false;
 
   if (replace) {
     closeChrome();
