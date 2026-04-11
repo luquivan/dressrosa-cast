@@ -17,6 +17,7 @@ const path = require('path');
 const os = require('os');
 const { URL } = require('url');
 const { openUrl, closeChrome, getLastUrl } = require('./opener');
+const { getPsExecPath, runInteractivePowerShell } = require('./interactive');
 
 const SCREENSHOT_PORT = 8010;
 const SCREENSHOT_PATH = path.join(os.tmpdir(), 'dressrosa-cast-screen.png');
@@ -32,6 +33,17 @@ $g.Dispose(); $bmp.Dispose()
 `.trim();
 
 function takeScreenshot() {
+  if (getPsExecPath()) {
+    const ok = runInteractivePowerShell(PS_SCRIPT);
+    if (ok) {
+      try {
+        return fs.readFileSync(SCREENSHOT_PATH);
+      } catch {
+        return null;
+      }
+    }
+  }
+
   try {
     execSync(`powershell -NoProfile -NonInteractive -Command "${PS_SCRIPT.replace(/\n/g, '; ')}"`, { timeout: 10000 });
     return fs.readFileSync(SCREENSHOT_PATH);

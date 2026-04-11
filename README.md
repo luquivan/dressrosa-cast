@@ -17,6 +17,7 @@ It also exposes a small HTTP control surface so another device on the network or
 
 - Node.js 18+
 - Windows 10/11
+- Optional: `PsExec64.exe` at `C:\Windows\Temp\PsExec64.exe` for reliable interactive UI bridging when managing Dressrosa remotely
 
 ## Install
 

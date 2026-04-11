@@ -5,6 +5,7 @@
  * spawning chrome.exe directly in the user desktop session.
  */
 const { spawn, spawnSync } = require('child_process');
+const { getPsExecPath, runInteractiveDetached } = require('./interactive');
 
 let lastUrl = null;
 
@@ -30,6 +31,12 @@ function openUrl(url, options = {}) {
 
   console.log(`[opener] Opening: ${url}`);
   lastUrl = url;
+
+  if (getPsExecPath()) {
+    if (runInteractiveDetached('explorer.exe', [url])) {
+      return;
+    }
+  }
 
   const proc = spawn('explorer.exe', [url], {
     detached: true,
