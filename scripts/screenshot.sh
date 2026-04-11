@@ -4,11 +4,11 @@
 # Usage: ./scripts/screenshot.sh [output.png]
 
 OUTPUT="${1:-/tmp/dressrosa-screen.png}"
-DRESSROSA_IP="dressrosa"
-SCREENSHOT_URL="http://100.83.60.48:8010/screenshot"
+CONTROL_BASE="${DRESSROSA_CONTROL_BASE:-http://100.83.60.48:8010}"
+SCREENSHOT_URL="${CONTROL_BASE}/screenshot"
 
 echo "[screenshot] Fetching screenshot from Dressrosa..."
-curl -s --max-time 15 "$SCREENSHOT_URL" -o "$OUTPUT"
+curl -fsS --max-time 15 "$SCREENSHOT_URL" -o "$OUTPUT"
 
 if [ -s "$OUTPUT" ]; then
     echo "[screenshot] Saved to $OUTPUT ($(du -h "$OUTPUT" | cut -f1))"
@@ -21,6 +21,6 @@ if [ -s "$OUTPUT" ]; then
         xdg-open "$OUTPUT" 2>/dev/null &
     fi
 else
-    echo "[screenshot] Failed — is dressrosa-cast running? Start with: schtasks /run /tn DressrosaCast"
+    echo "[screenshot] Failed — is dressrosa-cast running in the desktop session?"
     exit 1
 fi

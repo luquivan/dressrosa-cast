@@ -1,36 +1,90 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Registers dressrosa-cast as a Windows startup Task Scheduler task.
- * Must run on Dressrosa with the correct node path.
- * Runs at logon in the user's interactive session (not Session 0).
+ * Installs Dressrosa Cast as a user-session autostart on Windows.
+ * Task Scheduler proved brittle for long-running interactive processes,
+ * so we use a Startup-folder VBS launcher that starts Node hidden at logon.
  */
-const { execSync } = require('child_process');
-const path = require('path');
+const fs = require('fs');
 const os = require('os');
+const path = require('path');
+const { execSync } = require('child_process');
 
-const TASK_NAME = 'DressrosaCast';
-const NODE_PATH = process.execPath; // path to node.exe
-const SCRIPT_PATH = path.resolve(__dirname, '../src/index.js');
-const USERNAME = os.userInfo().username;
+const APP_NAME = 'Dressrosa Cast';
+const LEGACY_TASK_NAME = 'DressrosaCast';
+const NODE_PATH = process.execPath;
+const REPO_ROOT = path.resolve(__dirname, '..');
+const APPDATA = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+const STARTUP_DIR = path.join(APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
+const INSTALL_DIR = path.join(LOCALAPPDATA, 'DressrosaCast');
+const CMD_PATH = path.join(INSTALL_DIR, 'launch.cmd');
+const VBS_PATH = path.join(STARTUP_DIR, `${APP_NAME}.vbs`);
+const LOG_PATH = path.join(INSTALL_DIR, 'dressrosa-cast.log');
+const ERR_PATH = path.join(INSTALL_DIR, 'dressrosa-cast.err');
+
+if (process.platform !== 'win32') {
+  console.error('This installer only works on Windows.');
+  process.exit(1);
+}
 
 function run(cmd) {
   try {
-    const out = execSync(cmd, { encoding: 'utf8' });
-    console.log(out.trim());
-  } catch (e) {
-    console.error(e.message);
+    const out = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    return out.trim();
+  } catch (error) {
+    const stderr = error.stderr ? String(error.stderr).trim() : '';
+    const stdout = error.stdout ? String(error.stdout).trim() : '';
+    const message = stderr || stdout || error.message;
+    console.error(message);
+    return '';
   }
 }
 
-// Delete existing task
-run(`schtasks /delete /f /tn "${TASK_NAME}" 2>nul`);
+function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
 
-// Create new task: runs at logon, in user's interactive session
-const tr = `"${NODE_PATH}" "${SCRIPT_PATH}"`;
-const cmd = `schtasks /create /f /tn "${TASK_NAME}" /tr "${tr}" /sc onlogon /ru "${USERNAME}" /it /rl limited`;
-run(cmd);
+function writeFile(filePath, content) {
+  fs.writeFileSync(filePath, content, 'utf8');
+  console.log(`Wrote ${filePath}`);
+}
 
-console.log(`\nTask "${TASK_NAME}" registered.`);
-console.log('To start now: schtasks /run /tn DressrosaCast');
-console.log('To check:     schtasks /query /tn DressrosaCast /fo LIST /v');
+function toWindowsPath(filePath) {
+  return filePath.replace(/\//g, '\\');
+}
+
+function escapeVbs(value) {
+  return value.replace(/"/g, '""');
+}
+
+ensureDir(INSTALL_DIR);
+ensureDir(STARTUP_DIR);
+
+const launcherCmd = [
+  '@echo off',
+  'setlocal',
+  `cd /d "${toWindowsPath(REPO_ROOT)}"`,
+  `"${toWindowsPath(NODE_PATH)}" "src\\index.js" 1>> "${toWindowsPath(LOG_PATH)}" 2>> "${toWindowsPath(ERR_PATH)}"`,
+  '',
+].join('\r\n');
+
+const launcherVbs = [
+  'Set shell = CreateObject("WScript.Shell")',
+  `shell.CurrentDirectory = "${escapeVbs(toWindowsPath(REPO_ROOT))}"`,
+  `shell.Run Chr(34) & "${escapeVbs(toWindowsPath(CMD_PATH))}" & Chr(34), 0, False`,
+  '',
+].join('\r\n');
+
+writeFile(CMD_PATH, launcherCmd);
+writeFile(VBS_PATH, launcherVbs);
+
+// Best-effort cleanup of the legacy task-based installer to avoid duplicate launches.
+run(`cmd /c schtasks /delete /f /tn "${LEGACY_TASK_NAME}" >nul 2>nul`);
+
+console.log(`\n${APP_NAME} will now start from the Startup folder at user logon.`);
+console.log(`Startup launcher: ${VBS_PATH}`);
+console.log(`Command wrapper:  ${CMD_PATH}`);
+console.log(`Stdout log:       ${LOG_PATH}`);
+console.log(`Stderr log:       ${ERR_PATH}`);
+console.log('\nTo apply now: log off and back on to Dressrosa, or run the VBS launcher from the desktop session.');
