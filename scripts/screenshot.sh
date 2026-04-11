@@ -1,36 +1,26 @@
 #!/bin/bash
-# Take a screenshot on Dressrosa and display it locally.
+# Take a screenshot of Dressrosa's screen via the receiver's HTTP endpoint.
+# The receiver runs in Session 1 (user's desktop session), so this works.
 # Usage: ./scripts/screenshot.sh [output.png]
-# Requires: ssh access to Dressrosa, imagemagick or eog locally
 
 OUTPUT="${1:-/tmp/dressrosa-screen.png}"
-REMOTE_PATH='C:\Windows\Temp\dressrosa-cast-screen.png'
+DRESSROSA_IP="dressrosa"
+SCREENSHOT_URL="http://100.83.60.48:8010/screenshot"
 
-echo "[screenshot] Requesting screenshot from Dressrosa..."
+echo "[screenshot] Fetching screenshot from Dressrosa..."
+curl -s --max-time 15 "$SCREENSHOT_URL" -o "$OUTPUT"
 
-ssh -i ~/.ssh/id_ed25519 "Toronja Arenosa"@dressrosa "powershell -NoProfile -NonInteractive -Command \"\
-Add-Type -AssemblyName System.Windows.Forms,System.Drawing;\
-\$s=[System.Windows.Forms.Screen]::PrimaryScreen;\
-\$b=New-Object System.Drawing.Bitmap(\$s.Bounds.Width,\$s.Bounds.Height);\
-\$g=[System.Drawing.Graphics]::FromImage(\$b);\
-\$g.CopyFromScreen(\$s.Bounds.Location,[System.Drawing.Point]::Empty,\$s.Bounds.Size);\
-\$b.Save('$REMOTE_PATH');\$g.Dispose();\$b.Dispose();\
-Write-Output 'OK'\""
-
-echo "[screenshot] Downloading..."
-scp -i ~/.ssh/id_ed25519 "Toronja Arenosa@dressrosa:$REMOTE_PATH" "$OUTPUT" 2>/dev/null
-
-if [ -f "$OUTPUT" ]; then
-    echo "[screenshot] Saved to $OUTPUT"
-    # Display if running in X/Wayland
+if [ -s "$OUTPUT" ]; then
+    echo "[screenshot] Saved to $OUTPUT ($(du -h "$OUTPUT" | cut -f1))"
+    # Display
     if command -v eog &>/dev/null; then
         eog "$OUTPUT" &
     elif command -v feh &>/dev/null; then
         feh "$OUTPUT" &
     else
-        echo "[screenshot] View with: xdg-open $OUTPUT"
+        xdg-open "$OUTPUT" 2>/dev/null &
     fi
 else
-    echo "[screenshot] Failed to download screenshot"
+    echo "[screenshot] Failed — is dressrosa-cast running? Start with: schtasks /run /tn DressrosaCast"
     exit 1
 fi
