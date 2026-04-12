@@ -22,34 +22,62 @@ const { getPsExecPath, runInteractivePowerShell } = require('./interactive');
 const SCREENSHOT_PORT = 8010;
 const SCREENSHOT_PATH = path.join(os.tmpdir(), 'dressrosa-cast-screen.png');
 
+// PrtSc+clipboard method: handles WDDM hardware-accelerated rendering (Chrome, DirectX)
+// CopyFromScreen (GDI) only captures GDI layer on Windows 10/11 — leaves Chrome windows white.
+// Note: returns null when no real display is connected (WinDisc/TV off), better than a white PNG.
 const PS_SCRIPT = `
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public class WinInput {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT { public int X; public int Y; }
+    [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, int dwFlags, int dwExtraInfo);
+    [DllImport("user32.dll")] public static extern int SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+    public const byte VK_SNAPSHOT = 0x2C;
+    public const int KEYEVENTF_KEYUP = 2;
+    public static void WakeDisplay() {
+        POINT p;
+        GetCursorPos(out p);
+        SetCursorPos(p.X + 1, p.Y);
+        SetCursorPos(p.X, p.Y);
+    }
+    public static void SendPrintScreen() {
+        keybd_event(VK_SNAPSHOT, 0, 0, 0);
+        keybd_event(VK_SNAPSHOT, 0, KEYEVENTF_KEYUP, 0);
+    }
+}
+'@
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
-$screen = [System.Windows.Forms.Screen]::PrimaryScreen
-$bmp = New-Object System.Drawing.Bitmap($screen.Bounds.Width, $screen.Bounds.Height)
-$g = [System.Drawing.Graphics]::FromImage($bmp)
-$g.CopyFromScreen($screen.Bounds.Location, [System.Drawing.Point]::Empty, $screen.Bounds.Size)
-$bmp.Save('${SCREENSHOT_PATH.replace(/\\/g, '\\\\')}')
-$g.Dispose(); $bmp.Dispose()
+[WinInput]::WakeDisplay()
+Start-Sleep -Milliseconds 300
+[WinInput]::SendPrintScreen()
+Start-Sleep -Milliseconds 500
+$img = [System.Windows.Forms.Clipboard]::GetImage()
+if ($img -ne $null) {
+    $img.Save('${SCREENSHOT_PATH.replace(/\\/g, '\\\\')}', [System.Drawing.Imaging.ImageFormat]::Png)
+    $img.Dispose()
+    exit 0
+}
+exit 1
 `.trim();
 
 function takeScreenshot() {
-  if (getPsExecPath()) {
-    const ok = runInteractivePowerShell(PS_SCRIPT);
-    if (ok) {
-      try {
-        return fs.readFileSync(SCREENSHOT_PATH);
-      } catch {
-        return null;
-      }
-    }
-  }
-
+  // node runs in Session 1 (interactive desktop) — execute PS directly without PsExec
+  const scriptPath = path.join(os.tmpdir(), `dressrosa-shot-${Date.now()}.ps1`);
   try {
-    execSync(`powershell -NoProfile -NonInteractive -Command "${PS_SCRIPT.replace(/\n/g, '; ')}"`, { timeout: 10000 });
+    fs.writeFileSync(scriptPath, PS_SCRIPT, 'utf8');
+    execSync(
+      `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`,
+      { timeout: 15000 }
+    );
     return fs.readFileSync(SCREENSHOT_PATH);
   } catch (e) {
-    console.error('[screenshot] error:', e.message.slice(0, 200));
+    console.error('[screenshot] error:', e.message.slice(0, 300));
     return null;
+  } finally {
+    fs.rmSync(scriptPath, { force: true });
   }
 }
 
