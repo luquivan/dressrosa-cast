@@ -34,7 +34,8 @@ function handle(session, msg) {
     console.log(`[media] Full payload:`, JSON.stringify(data).slice(0, 500));
 
     const url = getUrlFromLoad(currentApp, media);
-    if (url) openUrl(url);
+    // replace=true closes existing Chrome before opening — avoids stacking windows
+    if (url) openUrl(url, { replace: true });
 
     const msId = mediaSessionId++;
     session.setMediaSession(msId);

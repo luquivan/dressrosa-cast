@@ -6,8 +6,10 @@ function handle(session, msg) {
   if (data.type === 'CONNECT') {
     console.log(`[conn] CONNECT from ${msg.sourceId}`);
   } else if (data.type === 'CLOSE') {
-    console.log(`[conn] CLOSE from ${msg.sourceId}`);
-    session.close();
+    // CLOSE means the virtual app session is ending — NOT the TLS connection.
+    // Real Chromecasts keep the underlying socket open for reconnection.
+    // Destroying the socket here breaks multi-cast workflows.
+    console.log(`[conn] CLOSE from ${msg.sourceId} (virtual session end)`);
   }
 }
 

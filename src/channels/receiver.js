@@ -19,6 +19,7 @@ function makeReceiverStatus(appId, displayName, sessionId) {
       statusText: 'Ready',
       namespaces: [
         { name: 'urn:x-cast:com.google.cast.media' },
+        { name: 'urn:x-cast:com.netflix.cast.media' },
       ],
       transportId: sessionId || 'cast-session-1',
       isIdleScreen: false,
