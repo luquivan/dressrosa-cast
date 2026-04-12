@@ -52,15 +52,36 @@ GET  /close
 POST /close
 ```
 
+## Restart from Skypiea
+
+If the receiver goes down, restart it without touching Dressrosa:
+
+```bash
+./scripts/restart-service.sh
+```
+
+Or manually via SSH:
+```bash
+ssh -i ~/.ssh/id_ed25519 "Toronja Arenosa"@dressrosa "powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue\""
+ssh -i ~/.ssh/id_ed25519 "Toronja Arenosa"@dressrosa 'C:\Windows\Temp\PsExec64.exe -accepteula -i 1 -d wscript.exe "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Dressrosa Cast.vbs"'
+```
+
 ## Supported services
 
-| Service | Status |
-|---------|--------|
-| YouTube | ✅ |
-| Netflix | ✅ |
-| Prime Video | ✅ |
-| HBO Max | 🔧 (needs payload capture) |
-| Crunchyroll | 🔧 (needs payload capture) |
+| Service | Status | URL format |
+|---------|--------|------------|
+| YouTube | ✅ | `youtube.com/watch?v=<videoId>` |
+| Netflix | ✅ | `netflix.com/watch/<numericId>` |
+| Prime Video | ✅ | `primevideo.com/detail/<ASIN>` |
+| HBO Max / Max | ⚠️ | `play.max.com/video/watch/<id>` (best guess from urn format) |
+| Crunchyroll | ⚠️ | `crunchyroll.com/watch/<episodeId>` (best guess) |
+
+For HBO/Crunchyroll: check `%LOCALAPPDATA%\DressrosaCast\dressrosa-cast.log` for the real `[media] Full payload:` line after casting, then update the parser if needed.
+
+## Screenshot
+
+- Works when TV is ON (uses PrtSc → clipboard, handles WDDM/hardware-accelerated rendering)
+- Returns 500 when TV is off (WinDisc virtual display — clipboard capture fails)
 
 ## Credits
 
