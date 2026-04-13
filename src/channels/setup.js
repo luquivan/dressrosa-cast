@@ -9,6 +9,7 @@
  * an unknown receiver.
  */
 const { getFriendlyName, getInstanceId, getModelName } = require('../device');
+const { logLine } = require('../logger');
 
 const NS = 'urn:x-cast:com.google.cast.setup';
 
@@ -18,7 +19,7 @@ function handle(session, msg) {
 
   const requestId = data.request_id || 0;
   const type = data.type || '';
-  console.log(`[setup] type=${type || '<empty>'} src=${msg.sourceId} req=${requestId}`);
+  logLine(`[setup] type=${type || '<empty>'} src=${msg.sourceId} req=${requestId}`);
 
   if (type === 'eureka_info' || type === '') {
     session.send(msg.destinationId, msg.sourceId, NS, JSON.stringify({
@@ -41,7 +42,7 @@ function handle(session, msg) {
         },
       },
     }));
-    console.log(`[setup] Responded eureka_info to ${msg.sourceId}`);
+    logLine(`[setup] Responded eureka_info to ${msg.sourceId}`);
   }
 }
 

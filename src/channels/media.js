@@ -2,6 +2,7 @@
 const NS = 'urn:x-cast:com.google.cast.media';
 const { getUrlFromLoad } = require('../services');
 const { openUrl } = require('../opener');
+const { logLine } = require('../logger');
 
 let mediaSessionId = 1;
 
@@ -30,8 +31,8 @@ function handle(session, msg) {
 
   if (data.type === 'LOAD') {
     const media = data.media || {};
-    console.log(`[media] LOAD app=${currentApp} contentId=${media.contentId}`);
-    console.log(`[media] Full payload:`, JSON.stringify(data).slice(0, 500));
+    logLine(`[media] LOAD app=${currentApp} contentId=${media.contentId}`);
+    logLine(`[media] Full payload: ${JSON.stringify(data).slice(0, 500)}`);
 
     const url = getUrlFromLoad(currentApp, media);
     // replace=true closes existing Chrome before opening — avoids stacking windows

@@ -28,6 +28,7 @@ node scripts/install-service.js
 ```
 
 This installs a hidden launcher into the Windows Startup folder for the logged-in user.
+It also refreshes the Private-profile firewall rules needed for mDNS (`5353/UDP`), SSDP (`1900/UDP`), and the Dressrosa HTTP/Cast ports (`8008-8010/TCP`).
 
 Then log off and back on, or run manually from Dressrosa's desktop session:
 ```bash
@@ -95,7 +96,9 @@ For HBO/Crunchyroll: check `%LOCALAPPDATA%\DressrosaCast\dressrosa-cast.log` for
 - Android / Google Play Services probes `urn:x-cast:com.google.cast.setup` from `gms_cast_prober-*`; the receiver now answers `eureka_info`
 - The receiver also exposes `urn:x-cast:com.google.cast.receiver.discovery` (`GET_DEVICE_INFO`) and `GET_APP_AVAILABILITY`
 - Some senders probe DIAL/SSDP instead of pure CastV2; the shim on `8008` / `1900` is there for that path
-- DIAL requests are logged as `[dial] ...` in `%LOCALAPPDATA%\DressrosaCast\dressrosa-cast.log`
+- `%LOCALAPPDATA%\DressrosaCast\dressrosa-cast.log` now includes `[mdns]`, `[dial]`, `[recv]`, `[conn]`, `[setup]`, `[discovery]`, and `[media]` traces
+- Dressrosa currently relies heavily on unsolicited mDNS announcements; they are emitted every 5 seconds so short-lived Cast pickers still notice the device even when active mDNS query/response is unreliable on Windows
+- If Windows discovery is still flaky, verify the Private firewall profile allows inbound UDP `5353`
 
 ## Screenshot
 

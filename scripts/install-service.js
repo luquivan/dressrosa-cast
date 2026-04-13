@@ -22,6 +22,11 @@ const CMD_PATH = path.join(INSTALL_DIR, 'launch.cmd');
 const VBS_PATH = path.join(STARTUP_DIR, `${APP_NAME}.vbs`);
 const LOG_PATH = path.join(INSTALL_DIR, 'dressrosa-cast.log');
 const ERR_PATH = path.join(INSTALL_DIR, 'dressrosa-cast.err');
+const FIREWALL_RULES = [
+  { name: 'Dressrosa Cast mDNS', protocol: 'UDP', localPort: '5353' },
+  { name: 'Dressrosa Cast SSDP', protocol: 'UDP', localPort: '1900' },
+  { name: 'Dressrosa Cast TCP', protocol: 'TCP', localPort: '8008-8010' },
+];
 
 if (process.platform !== 'win32') {
   console.error('This installer only works on Windows.');
@@ -82,9 +87,18 @@ writeFile(VBS_PATH, launcherVbs);
 // Best-effort cleanup of the legacy task-based installer to avoid duplicate launches.
 run(`cmd /c schtasks /delete /f /tn "${LEGACY_TASK_NAME}" >nul 2>nul`);
 
+for (const rule of FIREWALL_RULES) {
+  run(`cmd /c netsh advfirewall firewall delete rule name="${rule.name}" >nul 2>nul`);
+  run(`netsh advfirewall firewall add rule name="${rule.name}" dir=in action=allow protocol=${rule.protocol} localport=${rule.localPort} profile=private`);
+}
+
 console.log(`\n${APP_NAME} will now start from the Startup folder at user logon.`);
 console.log(`Startup launcher: ${VBS_PATH}`);
 console.log(`Command wrapper:  ${CMD_PATH}`);
 console.log(`Stdout log:       ${LOG_PATH}`);
 console.log(`Stderr log:       ${ERR_PATH}`);
+console.log('\nFirewall rules refreshed:');
+for (const rule of FIREWALL_RULES) {
+  console.log(`- ${rule.name} (${rule.protocol} ${rule.localPort}, Private profile)`);
+}
 console.log('\nTo apply now: log off and back on to Dressrosa, or run the VBS launcher from the desktop session.');

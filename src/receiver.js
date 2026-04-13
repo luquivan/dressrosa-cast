@@ -4,6 +4,7 @@ const protobuf = require('protobufjs');
 const path = require('path');
 const { getTlsCredentials } = require('./tls');
 const { buildAuthResponse } = require('./auth');
+const { logLine, logError } = require('./logger');
 const connCh = require('./channels/connection');
 const heartbeatCh = require('./channels/heartbeat');
 const receiverCh = require('./channels/receiver');
@@ -53,7 +54,7 @@ class CastSession {
     try {
       this.socket.write(Buffer.concat([lenBuf, buf]));
     } catch (e) {
-      console.error('[session] write error:', e.message);
+      logError(`[session] write error: ${e.message}`);
     }
   }
 }
@@ -87,7 +88,7 @@ function handleMessage(session, msg) {
   if (ns === discoveryCh.NS) return discoveryCh.handle(session, msg);
   if (ns === setupCh.NS) return setupCh.handle(session, msg);
 
-  console.log(`[recv] Unhandled ns=${ns} src=${msg.sourceId} payload=${JSON.stringify((msg.payloadUtf8 || '').slice(0, 300))}`);
+  logLine(`[recv] Unhandled ns=${ns} src=${msg.sourceId} payload=${JSON.stringify((msg.payloadUtf8 || '').slice(0, 300))}`);
 }
 
 function parseMessages(socket, session) {
@@ -105,7 +106,7 @@ function parseMessages(socket, session) {
         const msg = CastMessage.decode(msgBuf);
         handleMessage(session, msg);
       } catch (e) {
-        console.error('[recv] decode error:', e.message);
+        logError(`[recv] decode error: ${e.message}`);
       }
     }
   });
@@ -126,20 +127,20 @@ async function startReceiver() {
 
   server.on('secureConnection', (socket) => {
     const id = ++sessionCounter;
-    console.log(`[recv] New connection #${id} from ${socket.remoteAddress}`);
+    logLine(`[recv] New connection #${id} from ${socket.remoteAddress}`);
     const session = new CastSession(id, socket);
 
-    socket.on('error', (e) => console.error(`[recv] socket #${id} error:`, e.message));
-    socket.on('close', () => console.log(`[recv] connection #${id} closed`));
+    socket.on('error', (e) => logError(`[recv] socket #${id} error: ${e.message}`));
+    socket.on('close', () => logLine(`[recv] connection #${id} closed`));
 
     parseMessages(socket, session);
   });
 
   server.listen(CAST_PORT, '0.0.0.0', () => {
-    console.log(`[recv] Cast receiver listening on port ${CAST_PORT}`);
+    logLine(`[recv] Cast receiver listening on port ${CAST_PORT}`);
   });
 
-  server.on('error', (e) => console.error('[recv] server error:', e));
+  server.on('error', (e) => logError(`[recv] server error: ${e.message}`));
   return server;
 }
 

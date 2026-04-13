@@ -1,5 +1,6 @@
 'use strict';
 const NS = 'urn:x-cast:com.google.cast.receiver';
+const { logLine } = require('../logger');
 
 // Track the currently running app per session
 const sessions = new Map();
@@ -57,7 +58,7 @@ function handle(session, msg) {
     const appId = data.appId;
     const sessionId = `cast-${Date.now()}`;
     sessions.set(session.id, { appId, sessionId, displayName: appId });
-    console.log(`[receiver] LAUNCH app=${appId} session=${sessionId}`);
+    logLine(`[receiver] LAUNCH app=${appId} session=${sessionId}`);
     session.setCurrentApp(appId, sessionId);
     session.send(msg.destinationId, msg.sourceId, NS,
       JSON.stringify({ ...makeReceiverStatus(appId, appId, sessionId), requestId }));

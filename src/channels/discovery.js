@@ -5,6 +5,7 @@ const {
   getInstanceId,
   getModelName,
 } = require('../device');
+const { logLine } = require('../logger');
 
 const NS = 'urn:x-cast:com.google.cast.receiver.discovery';
 
@@ -14,7 +15,7 @@ function handle(session, msg) {
 
   const requestId = data.requestId || 0;
   const type = data.type || '';
-  console.log(`[discovery] type=${type || '<empty>'} src=${msg.sourceId} req=${requestId}`);
+  logLine(`[discovery] type=${type || '<empty>'} src=${msg.sourceId} req=${requestId}`);
 
   if (type === 'GET_DEVICE_INFO' || type === '') {
     session.send(msg.destinationId, msg.sourceId, NS, JSON.stringify({
@@ -26,7 +27,7 @@ function handle(session, msg) {
       deviceModel: getModelName(),
       friendlyName: getFriendlyName(),
     }));
-    console.log(`[discovery] Responded GET_DEVICE_INFO to ${msg.sourceId}`);
+    logLine(`[discovery] Responded GET_DEVICE_INFO to ${msg.sourceId}`);
   }
 }
 
