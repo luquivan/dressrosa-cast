@@ -8,6 +8,7 @@ const connCh = require('./channels/connection');
 const heartbeatCh = require('./channels/heartbeat');
 const receiverCh = require('./channels/receiver');
 const mediaCh = require('./channels/media');
+const discoveryCh = require('./channels/discovery');
 const setupCh = require('./channels/setup');
 
 const CAST_PORT = 8009;
@@ -83,6 +84,7 @@ function handleMessage(session, msg) {
   if (ns === heartbeatCh.NS) return heartbeatCh.handle(session, msg);
   if (ns === receiverCh.NS) return receiverCh.handle(session, msg);
   if (ns === mediaCh.NS) return mediaCh.handle(session, msg);
+  if (ns === discoveryCh.NS) return discoveryCh.handle(session, msg);
   if (ns === setupCh.NS) return setupCh.handle(session, msg);
 
   console.log(`[recv] Unhandled ns=${ns} src=${msg.sourceId} payload=${JSON.stringify((msg.payloadUtf8 || '').slice(0, 300))}`);

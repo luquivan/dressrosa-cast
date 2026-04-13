@@ -1,6 +1,7 @@
 'use strict';
 const { startReceiver } = require('./receiver');
 const { startMdns } = require('./mdns');
+const { startDialServer } = require('./dial');
 const { startScreenshotServer } = require('./screenshot');
 
 async function main() {
@@ -10,6 +11,7 @@ async function main() {
   try {
     await startReceiver();
     startMdns();
+    startDialServer();
     startScreenshotServer();
     console.log('Ready. Waiting for cast requests...');
   } catch (e) {

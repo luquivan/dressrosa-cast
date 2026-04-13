@@ -39,6 +39,20 @@ function handle(session, msg) {
     session.send(msg.destinationId, msg.sourceId, NS,
       JSON.stringify({ ...makeReceiverStatus(state.appId, state.displayName, state.sessionId), requestId }));
 
+  } else if (data.type === 'GET_APP_AVAILABILITY') {
+    const appIds = Array.isArray(data.appId)
+      ? data.appId
+      : (typeof data.appId === 'string' ? [data.appId] : []);
+    const availability = {};
+    for (const appId of appIds) {
+      availability[appId] = 'APP_AVAILABLE';
+    }
+    session.send(msg.destinationId, msg.sourceId, NS, JSON.stringify({
+      requestId,
+      responseType: 'GET_APP_AVAILABILITY',
+      availability,
+    }));
+
   } else if (data.type === 'LAUNCH') {
     const appId = data.appId;
     const sessionId = `cast-${Date.now()}`;

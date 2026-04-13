@@ -16,24 +16,20 @@
  */
 
 const dgram = require('dgram');
-const os = require('os');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const { getDeviceId, getFriendlyName, getModelName, getInstanceId } = require('./device');
 
 const MDNS_ADDR = '224.0.0.251';
 const MDNS_PORT = 5353;
 const CAST_PORT = 8009;
-const DEVICE_NAME = 'Dressrosa Cast';
+const DEVICE_NAME = getFriendlyName();
 const SERVICE_TYPE = '_googlecast._tcp.local';
 const SERVICE_TYPE_FQDN = '_googlecast._tcp.local';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-function getDeviceId() {
-  const host = os.hostname();
-  return crypto.createHash('md5').update(host).digest('hex').substring(0, 12).toUpperCase();
-}
 
 /**
  * Find the LAN IPv4 address — the real local network interface.
@@ -152,7 +148,7 @@ function buildARecord(ip) {
  * @param {boolean} opts.isProbe - true for proactive announcements (QR=0)
  */
 function buildAnnouncement({ deviceId, lanIp, certDigest, isProbe = false }) {
-  const instanceName = `${DEVICE_NAME}._googlecast._tcp.local`;
+  const instanceName = `${getInstanceId()}._googlecast._tcp.local`;
   const hostName = `${deviceId}.local`;
 
   const txtRecord = {
@@ -160,7 +156,7 @@ function buildAnnouncement({ deviceId, lanIp, certDigest, isProbe = false }) {
     cd: certDigest,
     rm: '',
     ve: '05',
-    md: 'Chromecast',
+    md: getModelName(),
     ic: '/setup/icon.png',
     fn: DEVICE_NAME,
     ca: '4101',

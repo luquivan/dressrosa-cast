@@ -9,9 +9,10 @@ It also exposes a small HTTP control surface so another device on the network or
 ## How it works
 
 1. Announces itself as `_googlecast._tcp` on the local network via mDNS
-2. Accepts Cast connections on port 8009 (TLS)
-3. Authenticates using pre-computed signatures (shanocast/AirReceiver method)
-4. When a LOAD command is received, parses the content ID and opens Chrome
+2. Exposes a minimal DIAL/SSDP surface on `8008` / `1900` for senders that still probe that path
+3. Accepts Cast connections on port `8009` (TLS)
+4. Authenticates using pre-computed signatures (shanocast/AirReceiver method)
+5. When a LOAD command is received, parses the content ID and opens Chrome
 
 ## Requirements
 
@@ -52,6 +53,17 @@ GET  /close
 POST /close
 ```
 
+Minimal DIAL endpoints on port `8008`:
+
+```text
+GET|HEAD /ssdp/device-desc.xml
+GET|HEAD /setup/eureka_info
+GET|HEAD /setup/icon.png
+GET|HEAD /apps/<app>
+POST      /apps/<app>
+DELETE    /apps/<app>/<runId>
+```
+
 ## Restart from Skypiea
 
 If the receiver goes down, restart it without touching Dressrosa:
@@ -77,6 +89,13 @@ ssh -i ~/.ssh/id_ed25519 "Toronja Arenosa"@dressrosa 'C:\Windows\Temp\PsExec64.e
 | Crunchyroll | ⚠️ | `crunchyroll.com/watch/<episodeId>` (best guess) |
 
 For HBO/Crunchyroll: check `%LOCALAPPDATA%\DressrosaCast\dressrosa-cast.log` for the real `[media] Full payload:` line after casting, then update the parser if needed.
+
+## Discovery Notes
+
+- Android / Google Play Services probes `urn:x-cast:com.google.cast.setup` from `gms_cast_prober-*`; the receiver now answers `eureka_info`
+- The receiver also exposes `urn:x-cast:com.google.cast.receiver.discovery` (`GET_DEVICE_INFO`) and `GET_APP_AVAILABILITY`
+- Some senders probe DIAL/SSDP instead of pure CastV2; the shim on `8008` / `1900` is there for that path
+- DIAL requests are logged as `[dial] ...` in `%LOCALAPPDATA%\DressrosaCast\dressrosa-cast.log`
 
 ## Screenshot
 
