@@ -63,8 +63,8 @@ function handleMessage(session, msg) {
   const ns = msg.namespace;
 
   if (ns === AUTH_NS) {
-    // DeviceAuthChallenge — respond with pre-computed auth
-    const authBytes = buildAuthResponse(castProto);
+    // DeviceAuthChallenge — sign dynamically if nonce present, else use pre-computed
+    const authBytes = buildAuthResponse(castProto, msg.payloadBinary, session._certDer);
     const CastMessage = castProto.lookupType('extensions.api.cast_channel.CastMessage');
     const response = CastMessage.create({
       protocolVersion: 0,
@@ -117,6 +117,8 @@ let sessionCounter = 0;
 async function startReceiver() {
   await loadProto();
   const { certPem, keyPem, certDer } = getTlsCredentials();
+  // Keep a reference to certDer so auth handler can use it
+  let currentCertDer = certDer;
 
   const server = tls.createServer({
     cert: certPem,
@@ -129,6 +131,7 @@ async function startReceiver() {
     const id = ++sessionCounter;
     logLine(`[recv] New connection #${id} from ${socket.remoteAddress}`);
     const session = new CastSession(id, socket);
+    session._certDer = currentCertDer;
 
     socket.on('error', (e) => logError(`[recv] socket #${id} error: ${e.message}`));
     socket.on('close', () => logLine(`[recv] connection #${id} closed`));

@@ -94,4 +94,18 @@ function getTlsCredentials() {
   return { certPem, keyPem, certDer, index };
 }
 
-module.exports = { getTlsCredentials, getWindowIndex };
+/**
+ * Sign arbitrary bytes with the peer private key.
+ * algorithm: 'sha1' (default) or 'sha256'
+ * Returns a Buffer with the RSA-PKCS1v15 signature.
+ */
+function signWithPeerKey(dataBuffer, algorithm = 'sha1') {
+  const { privateKey } = generateTlsCert(getWindowIndex()); // just reuse cached key
+  const md = algorithm === 'sha256'
+    ? forge.md.sha256.create()
+    : forge.md.sha1.create();
+  md.update(dataBuffer.toString('binary'));
+  return Buffer.from(privateKey.sign(md), 'binary');
+}
+
+module.exports = { getTlsCredentials, getWindowIndex, signWithPeerKey };
