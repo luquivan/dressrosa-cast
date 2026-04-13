@@ -90,19 +90,26 @@ function buildEurekaInfo(baseUrl) {
   return JSON.stringify({
     version: 12,
     name: getFriendlyName(),
-    setupState: 0,
+    setup_state: 60,
     locale: 'en-US',
-    ssdpUdn: getInstanceId(),
-    detailIconUrl: `${baseUrl}/setup/icon.png`,
-    deviceInfo: {
-      manufacturer: 'google',
+    ssdp_udn: getInstanceId(),
+    detail_icon_url: `${baseUrl}/setup/icon.png`,
+    device_info: {
+      manufacturer: 'Google Inc.',
       product_name: getModelName(),
       ssdp_udn: getInstanceId(),
+      model_name: getModelName(),
+      extended_device_status: 0,
+      device_status: 0,
     },
-    buildInfo: {
-      build_type: 2,
-      cast_build_revision: '1.0',
-      system_build_number: 'BUILD_NUMBER',
+    build_info: {
+      build_type: 0,
+      cast_build_revision: '1.56.235556',
+      system_build_number: '235556',
+      release_track: 'stable-channel',
+    },
+    net: {
+      connected: true,
     },
   });
 }

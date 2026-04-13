@@ -22,24 +22,35 @@ function handle(session, msg) {
   logLine(`[setup] type=${type || '<empty>'} src=${msg.sourceId} req=${requestId}`);
 
   if (type === 'eureka_info' || type === '') {
+    // Fields at top level (not nested under 'data') — matches real Chromecast behavior.
+    // setup_state: 60 = fully set up. Without this GMS treats the device as unconfigured.
     session.send(msg.destinationId, msg.sourceId, NS, JSON.stringify({
       type: 'eureka_info',
       request_id: requestId,
       response_code: 200,
       response_string: 'OK',
-      data: {
+      version: 12,
+      name: getFriendlyName(),
+      setup_state: 60,
+      locale: 'en-US',
+      device_info: {
+        manufacturer: 'Google Inc.',
+        product_name: getModelName(),
+        ssdp_udn: getInstanceId(),
+        model_name: getModelName(),
+        extended_device_status: 0,
+        device_status: 0,
+        netif_status: 1,
+      },
+      build_info: {
+        build_type: 0,
+        cast_build_revision: '1.56.235556',
+        system_build_number: '235556',
+        release_track: 'stable-channel',
         version: 12,
-        name: getFriendlyName(),
-        device_info: {
-          manufacturer: 'google',
-          product_name: getModelName(),
-          ssdp_udn: getInstanceId(),
-        },
-        build_info: {
-          build_type: 2,
-          cast_build_revision: '1.0',
-          system_build_number: 'BUILD_NUMBER',
-        },
+      },
+      net: {
+        connected: true,
       },
     }));
     logLine(`[setup] Responded eureka_info to ${msg.sourceId}`);
