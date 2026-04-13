@@ -8,6 +8,7 @@ const connCh = require('./channels/connection');
 const heartbeatCh = require('./channels/heartbeat');
 const receiverCh = require('./channels/receiver');
 const mediaCh = require('./channels/media');
+const setupCh = require('./channels/setup');
 
 const CAST_PORT = 8009;
 const AUTH_NS = 'urn:x-cast:com.google.cast.tp.deviceauth';
@@ -82,8 +83,9 @@ function handleMessage(session, msg) {
   if (ns === heartbeatCh.NS) return heartbeatCh.handle(session, msg);
   if (ns === receiverCh.NS) return receiverCh.handle(session, msg);
   if (ns === mediaCh.NS) return mediaCh.handle(session, msg);
+  if (ns === setupCh.NS) return setupCh.handle(session, msg);
 
-  console.log(`[recv] Unhandled namespace: ${ns}`, (msg.payloadUtf8 || '').slice(0, 200));
+  console.log(`[recv] Unhandled ns=${ns} src=${msg.sourceId} payload=${JSON.stringify((msg.payloadUtf8 || '').slice(0, 300))}`);
 }
 
 function parseMessages(socket, session) {
