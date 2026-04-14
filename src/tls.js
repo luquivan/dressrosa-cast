@@ -1,9 +1,13 @@
 'use strict';
 /**
- * TLS certificate generation matching shanocast's exact format.
- * Serial starts at 0x51c9ac6, TLS cert is the 4th created (index 3).
- * Uses SHA-1 for signing (not SHA-256) and the fixed peer RSA key.
- * CN = '4aa9ca2e-c340-11ea-8000-18ba395587df'
+ * TLS certificate generation matching AirReceiver/Shanocast's peer certificate.
+ *
+ * The current TLS cert changes every 48 hours, but some fields stay fixed:
+ * - serial = 0x051c9ac9
+ * - subject/issuer CN = 4aa9ca2e-c340-11ea-8000-18ba395587df
+ * - CN is encoded as UTF8String
+ * - no keyUsage extension
+ * - self-signed with SHA-1 using the extracted peer RSA key
  */
 const forge = require('node-forge');
 const fs = require('fs');
@@ -13,10 +17,7 @@ const PEER_KEY_DER = fs.readFileSync(path.join(__dirname, '../data/peer_key.der'
 const DEVICE_CN = '4aa9ca2e-c340-11ea-8000-18ba395587df';
 const START_DATE_SEC = 1692057600; // 2023-08-15 00:00:00 UTC
 const TWO_DAYS_SEC = 2 * 24 * 60 * 60;
-const SERIAL_BASE = 0x51c9ac6;
-// TLS cert is created 4th in GenerateCredentials (root, inter, device, tls)
-// so serial = SERIAL_BASE + windowIndex*4 + 3
-// But in shanocast continuous run: SERIAL_BASE + index*4 + 3
+const TLS_SERIAL = 0x51c9ac9;
 
 let _cachedCert = null;
 let _cachedIndex = -1;
@@ -48,30 +49,20 @@ function generateTlsCert(index) {
   const cert = forge.pki.createCertificate();
   cert.publicKey = publicKey;
 
-  // Serial: SERIAL_BASE + windowIndex*4 + 3
-  const serial = SERIAL_BASE + index * 4 + 3;
-  cert.serialNumber = serial.toString(16).padStart(8, '0');
+  cert.serialNumber = TLS_SERIAL.toString(16);
 
   cert.validity.notBefore = certDate;
   cert.validity.notAfter = notAfter;
 
-  const attrs = [{ name: 'commonName', value: DEVICE_CN }];
+  const attrs = [{
+    name: 'commonName',
+    value: DEVICE_CN,
+    valueTagClass: forge.asn1.Type.UTF8,
+  }];
   cert.setSubject(attrs);
   cert.setIssuer(attrs);
 
-  // Extensions: KeyUsage = digitalSignature only (make_ca = false)
-  cert.setExtensions([
-    {
-      name: 'keyUsage',
-      keyCertSign: false,
-      digitalSignature: true,
-      nonRepudiation: false,
-      keyEncipherment: false,
-      dataEncipherment: false,
-    },
-  ]);
-
-  // Sign with SHA-1 (shanocast patches EVP_sha256 → EVP_sha1)
+  // Sign with SHA-1 exactly like AirReceiver/Shanocast.
   cert.sign(privateKey, forge.md.sha1.create());
 
   const certDer = Buffer.from(forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes(), 'binary');
@@ -94,18 +85,4 @@ function getTlsCredentials() {
   return { certPem, keyPem, certDer, index };
 }
 
-/**
- * Sign arbitrary bytes with the peer private key.
- * algorithm: 'sha1' (default) or 'sha256'
- * Returns a Buffer with the RSA-PKCS1v15 signature.
- */
-function signWithPeerKey(dataBuffer, algorithm = 'sha1') {
-  const { privateKey } = generateTlsCert(getWindowIndex()); // just reuse cached key
-  const md = algorithm === 'sha256'
-    ? forge.md.sha256.create()
-    : forge.md.sha1.create();
-  md.update(dataBuffer.toString('binary'));
-  return Buffer.from(privateKey.sign(md), 'binary');
-}
-
-module.exports = { getTlsCredentials, getWindowIndex, signWithPeerKey };
+module.exports = { getTlsCredentials, getWindowIndex, generateTlsCert };
